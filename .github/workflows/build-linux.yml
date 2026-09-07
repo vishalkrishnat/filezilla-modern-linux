@@ -1,0 +1,45 @@
+name: Build (Linux)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:sid
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          apt-get update -qq
+          DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+            build-essential pkg-config autoconf automake libtool git \
+            libfilezilla-dev libfzssh-dev libwxgtk3.2-dev \
+            libgnutls28-dev libsqlite3-dev nettle-dev libidn2-dev \
+            libgtk-3-dev libboost-regex-dev libboost-dev \
+            gettext xdg-utils
+
+      - name: autoreconf
+        run: autoreconf -fi
+
+      - name: configure
+        run: ./configure --prefix=/usr/local --with-pugixml=builtin
+
+      - name: make
+        run: make -j"$(nproc)"
+
+      - name: Smoke-test binary starts
+        run: |
+          apt-get install -y -qq xvfb
+          xvfb-run -a ./src/interface/filezilla --version
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: filezilla-modern-linux-x86_64
+          path: src/interface/filezilla
