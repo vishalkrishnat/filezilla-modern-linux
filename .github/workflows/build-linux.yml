@@ -36,7 +36,9 @@ jobs:
       - name: Smoke-test binary starts
         run: |
           apt-get install -y -qq xvfb
-          xvfb-run -a ./src/interface/filezilla --version
+          # --version intentionally exits non-zero after printing; check output instead.
+          xvfb-run -a ./src/interface/filezilla --version 2>&1 | tee /tmp/fz-version.log || true
+          grep -q "FileZilla " /tmp/fz-version.log
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
